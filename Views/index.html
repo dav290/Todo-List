@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todo-List</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css"
+      crossorigin="anonymous"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: Arial, sans-serif;
+      }
+
+      body {
+        background-color: #f4f4f4;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+      }
+
+      .container {
+        width: 90%;
+        max-width: 800px;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      h1 {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+
+      .js-add-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      input, select {
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        font-size: 16px;
+        width: 48%;
+      }
+
+      .js-time-input {
+        width: 100px;
+      }
+
+      .js-actions-wrapper {
+        display: flex;
+        gap: 10px;
+      }
+
+      button {
+        padding: 10px 15px;
+        border: none;
+        cursor: pointer;
+        font-size: 16px;
+        border-radius: 5px;
+      }
+
+      .js-add-button {
+        background-color: #28a745;
+        color: white;
+      }
+
+      .task-table {
+        width: 100%;
+        margin-top: 20px;
+        border-collapse: collapse;
+      }
+
+      .task-table th, .task-table td {
+        border: 1px solid #ddd;
+        padding: 10px;
+        text-align: center;
+      }
+
+      .task-table th {
+        background-color: #007bff;
+        color: white;
+      }
+
+      .delete-button {
+        background-color: #dc3545;
+        color: white;
+        padding: 5px 10px;
+        border: none;
+        cursor: pointer;
+        border-radius: 5px;
+      }
+    </style>
+</head>
+<body>
+    <div class="container">
+      <h1>Todo-List</h1>
+      <div class="js-add-grid">
+        <input type="text" placeholder="Add a new task here..." class="js-name-input" />
+        <input type="date" class="js-date-input" />
+        <input type="time" class="js-time-input" />
+        <select class="js-category-input">
+          <option value="">Select Category</option>
+          <option value="work">Work</option>
+          <option value="personal">Personal</option>
+          <option value="shopping">Shopping</option>
+          <option value="other">Other</option>
+        </select>
+        <select class="js-priority-input">
+          <option value="">Select Priority</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
+        <div class="js-actions-wrapper">
+          <button class="js-add-button">Add Task</button>
+        </div>
+      </div>
+
+      <table class="task-table">
+        <thead>
+          <tr>
+            <th>Task</th>
+            <th>Date</th>
+            <th>Time</th>
+            <th>Category</th>
+            <th>Priority</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody class="task-list">
+        </tbody>
+      </table>
+    </div>
+
+    <script>
+      // Function to fetch and display tasks
+      async function fetchTasks() {
+        try {
+          const response = await fetch('/todos'); // Fetch data from server
+          const tasks = await response.json(); // Convert response to JSON
+          
+          const tableBody = document.querySelector('.task-list');
+          tableBody.innerHTML = ''; // Clear table before adding rows
+
+          tasks.forEach(task => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+              <td>${task.Task}</td>
+              <td>${task.Date}</td>
+              <td>${task.Time}</td>
+              <td>${task.Category}</td>
+              <td>${task.Priority}</td>
+              <td><button class="delete-button" onclick="deleteTask('${task._id}', this)">Delete</button></td>
+            `;
+            tableBody.appendChild(row);
+          });
+        } catch (error) {
+          console.error('Error fetching tasks:', error);
+        }
+      }
+
+      // Function to add a new task
+      document.querySelector('.js-add-button').addEventListener('click', async function () {
+        const name = document.querySelector('.js-name-input').value;
+        const date = document.querySelector('.js-date-input').value;
+        const time = document.querySelector('.js-time-input').value;
+        const category = document.querySelector('.js-category-input').value;
+        const priority = document.querySelector('.js-priority-input').value;
+
+        if (!name || !date || !time || !category || !priority) {
+          alert("Please fill in all fields");
+          return;
+        }
+
+        const newTask = { Task: name, Date: date, Time: time, Category: category, Priority: priority, Action: 'pending' };
+
+        try {
+          const response = await fetch('/submit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(newTask)
+          });
+
+          if (response.ok) {
+            fetchTasks(); // Refresh task list
+            document.querySelector('.js-name-input').value = '';
+            document.querySelector('.js-date-input').value = '';
+            document.querySelector('.js-time-input').value = '';
+            document.querySelector('.js-category-input').value = '';
+            document.querySelector('.js-priority-input').value = '';
+          } else {
+            alert('Failed to add task');
+          }
+        } catch (error) {
+          console.error('Error adding task:', error);
+        }
+      });
+
+      async function deleteTask(taskId, buttonElement) {
+    try {
+        const response = await fetch(`/todos/${taskId}`, { method: 'DELETE' });
+
+        if (response.ok) {
+            buttonElement.closest('tr').remove(); // Remove row from table
+        } else {
+            alert('Failed to delete task');
+        }
+    } catch (error) {
+        console.error('Error deleting task:', error);
+    }
+}
+
+// Fetch tasks when the page loads
+window.onload = fetchTasks;
+    </script>
+</body>
+</html>
